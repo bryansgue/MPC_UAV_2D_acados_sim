@@ -110,3 +110,28 @@ def fancy_plots_1():
     plt.ioff()
     ax1 = fig.add_subplot(111)
     return fig, ax1
+
+
+def plot_pose(x, xref, t):
+    fig, ax = fancy_plots_1()
+    
+    colors = ['#BB5651', '#69BB51', '#5189BB']  # Add color for psi
+    labels = [r'$x$', r'$y$', r'$\psi$']
+    
+    for i in range(3):
+        ax.plot(t[0:x.shape[1]], x[i, :],
+                color=colors[i], lw=2, ls="-", label=labels[i])
+        
+        ax.plot(t[0:x.shape[1]], xref[i, 0:x.shape[1]],
+                color=colors[i], lw=2, ls="--", label=labels[i] + r'$d$')
+
+    ax.set_ylabel(r"$[states]$", rotation='vertical')
+    ax.set_xlabel(r"$[t]$", labelpad=5)
+    
+    ax.legend(loc="best", frameon=True, fancybox=True, shadow=False, ncol=2,
+              borderpad=0.5, labelspacing=0.5, handlelength=3, handletextpad=0.1,
+              borderaxespad=0.3, columnspacing=2)
+    
+    ax.grid(color='#949494', linestyle='-.', linewidth=0.5)
+    
+    return fig

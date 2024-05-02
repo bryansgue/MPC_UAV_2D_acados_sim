@@ -11,6 +11,7 @@ from casadi import vertcat
 from casadi import cos
 from casadi import sin
 from fancy_plots import plot_pose, fancy_plots_2, fancy_plots_1
+from graf_2 import animate_triangle_pista
 from graf import animate_triangle
 from plot_states import plot_states
 #from graf import animate_triangle
@@ -41,6 +42,22 @@ def f_system_model():
     F = MX.sym('F')
     T = MX.sym('T')
     u = vertcat(F, T)
+
+    # Ref system as a external value
+    nx_d = MX.sym('nx_d')
+    ny_d = MX.sym('ny_d')
+    psi_d = MX.sym('psi_d')
+
+    nx_p_d = MX.sym('nx_d')
+    ny_p_d = MX.sym('ny_d')
+    psi_p_d = MX.sym('psi_d')
+
+
+    F_d = MX.sym('F_d')
+    T_d = MX.sym('T_d')
+
+    
+    p = vertcat(nx_d, ny_d, psi_d, nx_p_d, ny_p_d, psi_p_d, F_d , T_d )
 
     # Dynamic of the system
     R_system = MX.zeros(6, 2)
@@ -73,6 +90,7 @@ def f_system_model():
     model.xdot = x_p
     model.u = u
     model.name = model_name
+    model.p = p
 
     return model, f_system
 
@@ -95,45 +113,60 @@ def create_ocp_solver_description(x0, N_horizon, t_horizon, bounded) -> AcadosOc
 
     model, f_system = f_system_model()
     ocp.model = model
+    ocp.p = model.p
+    
     
     # Calcula las dimensiones
     nx = model.x.shape[0]
     nu = model.u.shape[0]
+    ny = nx + nu
 
     # set dimensions
     ocp.dims.N = N_horizon
+    ocp.parameter_values = np.zeros(ny)
 
     # set cost
-    Q_mat = 1 * np.diag([1, 1, 0, 0.0, 0.0, 0.0])  # [x,th,dx,dth]
+    Q_mat = 4 * np.diag([1, 1, 0, 0.0, 0.0, 0.0])  # [x,th,dx,dth]
     R_mat = 0*0.0000001 * np.diag([1,  1])
 
-    ocp.cost.cost_type = "LINEAR_LS"
-    ocp.cost.cost_type_e = "LINEAR_LS"
+    ocp.cost.cost_type = "EXTERNAL"
+    ocp.cost.cost_type_e = "EXTERNAL"
+    
+    error_pose = ocp.p[0:6] - model.x[0:6]
+    ocp.model.cost_expr_ext_cost = error_pose.T @ Q_mat @error_pose  + model.u.T @ R_mat @ model.u 
+    ocp.model.cost_expr_ext_cost_e = error_pose.T @ Q_mat @ error_pose
 
-    ny = nx + nu
-    ny_e = nx
+    # Definir el tipo de restricciones
+    ocp.constraints.constr_type = 'BGH'
 
-    ocp.cost.W_e = Q_mat
-    ocp.cost.W = scipy.linalg.block_diag(Q_mat, R_mat)
+    # Calcular el número de restricciones
+    constraints = vertcat(model.x[0])
+    Dim_constraints = 1
 
-    ocp.cost.Vx = np.zeros((ny, nx))
-    ocp.cost.Vx[:nx, :nx] = np.eye(nx)
+    # Establecer la expresión de las restricciones en el modelo
+    ocp.model.con_h_expr = constraints
 
-    Vu = np.zeros((ny, nu))
-    Vu[nx : nx + nu, 0:nu] = np.eye(nu)
-    ocp.cost.Vu = Vu
+    # Configurar los pesos de costo de las restricciones
+    cost_weights = np.ones(Dim_constraints)
+    ocp.cost.Zl = 1e3 * cost_weights
+    ocp.cost.Zu = 1e3 * cost_weights
+    ocp.cost.zl = cost_weights
+    ocp.cost.zu = cost_weights
 
-    ocp.cost.Vx_e = np.eye(nx)
+    # Configurar los límites inferior y superior de las restricciones
+    ocp.constraints.lh = -1e9 * np.ones(Dim_constraints)  # límite inferior (min)
+    ocp.constraints.uh = 2.5 * np.ones(Dim_constraints)   # límite superior (max)
 
-    ocp.cost.yref = np.zeros((ny,))
-    ocp.cost.yref_e = np.zeros((ny_e,))
+    # Configurar los índices de las restricciones
+    ocp.constraints.idxsh = np.arange(Dim_constraints)
+
+    
+    ocp.constraints.x0 = x0
 
     # set constraints
     ocp.constraints.lbu = np.array([F_min, T_min])
     ocp.constraints.ubu = np.array([F_max, T_max])
     ocp.constraints.idxbu = np.array([0, 1])
-
-    ocp.constraints.x0 = x0
 
     # set options
     ocp.solver_options.qp_solver = "FULL_CONDENSING_HPIPM"  # FULL_CONDENSING_QPOASES
@@ -150,10 +183,27 @@ def create_ocp_solver_description(x0, N_horizon, t_horizon, bounded) -> AcadosOc
 
     return ocp
 
+def calculate_unit_normals(t, xref):
+    dx_dt = np.gradient(xref[0, :], t)
+    dy_dt = np.gradient(xref[1, :], t)
+    tangent_x = dx_dt / np.sqrt(dx_dt**2 + dy_dt**2)
+    tangent_y = dy_dt / np.sqrt(dx_dt**2 + dy_dt**2)
+    normal_x = -tangent_y
+    normal_y = tangent_x
+    return normal_x, normal_y
+
+def displace_points_along_normal(x, y, normal_x, normal_y, displacement):
+    x_prime = x + displacement * normal_x
+    y_prime = y + displacement * normal_y
+    return x_prime, y_prime
+
+
 def main():
+
+    plt.figure(figsize=(10, 5))
     # Initial Values System
     # Simulation Time
-    t_final = 30
+    t_final = 10
     # Sample time
     frecuencia = 30
     t_s = 1/frecuencia
@@ -230,18 +280,44 @@ def main():
         acados_ocp_solver.set(stage, "x", 0.0 * np.ones(x[:,0].shape))
     for stage in range(N_prediction):
         acados_ocp_solver.set(stage, "u", np.zeros((nu,)))
+    
+    #GENERACION DE LA PISTA
+    normal_x, normal_y = calculate_unit_normals(t, xref)
+    track_width = 0.8
+    
     # Simulation System
 
+
+    # Crear una matriz de matrices para almacenar las coordenadas (x, y) de cada punto para cada instante k
+    puntos = 20
+    left_poses = np.empty((puntos, 2, t.shape[0]+1-N_prediction), dtype = np.double)
+    rigth_poses = np.empty((puntos, 2, t.shape[0]+1-N_prediction), dtype = np.double)
+
+
+    for i in range(puntos, t.shape[0]-N_prediction):
+            left_displacement = -0.5 * track_width
+            right_displacement = 0.5 * track_width
+
+            left_x, left_y = displace_points_along_normal(xref[0, i-puntos:i], xref[1, i-puntos:i], normal_x[i-puntos:i], normal_y[i-puntos:i], left_displacement)
+            right_x, right_y = displace_points_along_normal(xref[0, i-puntos:i], xref[1, i-puntos:i], normal_x[i-puntos:i], normal_y[i-puntos:i], right_displacement)
+
+            # Guardar las trayectorias en las matrices de historial
+            left_poses[:, :, i] = np.array([left_x, left_y]).T
+            rigth_poses[:, :, i] = np.array([right_x, right_y]).T
+   
     for k in range(0, t.shape[0]-N_prediction):
+
+        # Control Law Section
         acados_ocp_solver.set(0, "lbx", x[:,k])
         acados_ocp_solver.set(0, "ubx", x[:,k])
 
         # update yref
         for j in range(N_prediction):
             yref = xref[:,k+j]
-            acados_ocp_solver.set(j, "yref", yref)
+            acados_ocp_solver.set(j, "p", yref)
+        
         yref_N = xref[:,k+N_prediction]
-        acados_ocp_solver.set(N_prediction, "yref", yref_N[0:6])
+        acados_ocp_solver.set(N_prediction, "p", yref_N)
 
         # Get Computational Time
         tic = time.time()
@@ -258,17 +334,19 @@ def main():
         delta_t[:, k] = toc
 
 
-
+    
     # Ejemplo de uso
+    fig3 = animate_triangle_pista(x[:3, :], xref[:2, :], left_poses[:, : , :], rigth_poses[:, :, :], 'animation.mp4')   
+    #fig3 = animate_triangle(x[:3, :], xref[:2, :], 'animation.mp4')
 
-    #animate_triangle(x[:3, :], xref[:2, :], 'animation.gif')
-        
+   # plot_states(x[:3, :], xref[:3, :], 'states_plot.png')
+
+     
     fig1 = plot_pose(x, xref, t)
     fig1.savefig("1_pose.png")
-    #plot_states(x[:3, :], xref[:3, :], 'states_plot.png')
 
 
-
+    print(f'Mean iteration time with MLP Model: {1000*np.mean(delta_t):.1f}ms -- {1/np.mean(delta_t):.0f}Hz)')
 
         
 if __name__ == '__main__':

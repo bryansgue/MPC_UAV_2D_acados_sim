@@ -1,9 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-import imageio
 
-def animate_triangle(x, xref, save_filename):
+def animate_triangle_pista(x, xref, left_poses, right_poses, save_filename):
     # Extraer los estados de posición y orientación de x
     y_positions = x[0, :]
     z_positions = x[1, :]
@@ -13,7 +12,7 @@ def animate_triangle(x, xref, save_filename):
     num_frames = x.shape[1]
 
     # Crear la figura y el eje
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(12, 9))
     ax.set_xlim(-5, 5)
     ax.set_ylim(-1.0, 10.0)
 
@@ -22,6 +21,13 @@ def animate_triangle(x, xref, save_filename):
     ax.add_patch(triangle)
     xref_line, = ax.plot([], [], 'b--')
     x_line, = ax.plot([], [], 'g-')
+
+    # Inicializar los puntos izquierdos y derechos
+    left_points, = ax.plot([], [], 'bo', markersize=3, label='Puntos izquierdos')
+    right_points, = ax.plot([], [], 'ro', markersize=3, label='Puntos derechos')
+
+
+
 
     # Función de animación que actualiza la posición y orientación del triángulo en cada cuadro
     def animate(i):
@@ -53,19 +59,21 @@ def animate_triangle(x, xref, save_filename):
         # Actualizar las coordenadas de x en el triángulo
         x_line.set_data(y_positions[:i+1], z_positions[:i+1])
 
-        return triangle, xref_line, x_line
+        # Obtener las coordenadas de los puntos izquierdos y derechos para el cuadro actual
+        left_pos = left_poses[:, :, i]
+        right_pos = right_poses[:, :, i]
+
+        # Actualizar las coordenadas de los puntos izquierdos y derechos
+        left_points.set_data(left_pos[:, 0], left_pos[:, 1])
+        right_points.set_data(right_pos[:, 0], right_pos[:, 1])
+
+        # Retorna los elementos que se deben actualizar en cada cuadro de la animación
+        return triangle, xref_line, x_line, left_points, right_points
 
     # Crear la animación
     anim = animation.FuncAnimation(fig, animate, frames=num_frames, interval=0.5*100)
 
-    # Guardar la animación en un archivo GIF usando imageio
-    #writer = animation.ImageMagickFileWriter(fps=10)
-    #anim.save(save_filename, writer=writer)
-    
-
     # Guardar la animación en un archivo MP4
-    
     anim.save(save_filename, writer='ffmpeg', codec='h264', fps=10)
 
-
-
+#

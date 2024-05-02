@@ -88,6 +88,19 @@ int main()
     double u0[NU];
     u0[0] = 0.0;
     u0[1] = 0.0;
+    // set parameters
+    double p[NP];
+    p[0] = 0;
+    p[1] = 0;
+    p[2] = 0;
+    p[3] = 0;
+    p[4] = 0;
+    p[5] = 0;
+    p[6] = 0;
+    p[7] = 0;
+
+    Drone_ode_acados_sim_update_params(capsule, p, NP);
+  
 
     int n_sim_steps = 3;
     // solve ocp in loop
