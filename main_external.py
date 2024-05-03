@@ -19,6 +19,7 @@ from graf_2 import animate_triangle_pista
 from graf import animate_triangle
 from plot_states import plot_states
 from scipy.interpolate import interp1d
+from scipy.interpolate import CubicSpline
 #from graf import animate_triangle
 
 def f_system_model():
@@ -274,8 +275,8 @@ def main():
     # Reference Trajectory
     # Reference Signal of the system
     xref = np.zeros((8, t.shape[0]), dtype = np.double)
-    xref[0, :] = 3 * np.sin(5 * 0.08 * t)
-    xref[1, :] = 2.5 * np.sin(5* 0.04 * t) + 5
+    xref[0, :] = 4 * np.sin(5*0.03*t) 
+    xref[1, :] = 3 * np.sin(5*0.06*t) + 5
     xref[2,:] = 45*(np.pi)/180
     xref[3,:] = 0.0 
     xref[4,:] = 0.0
@@ -329,51 +330,75 @@ def main():
     left_poses = np.empty((puntos, 2, t.shape[0]+1-N_prediction), dtype = np.double)
     rigth_poses = np.empty((puntos, 2, t.shape[0]+1-N_prediction), dtype = np.double)
 
-
     x_range_left = np.zeros((50, t.shape[0]+1-N_prediction), dtype = np.double)
     y_interp_left = np.zeros((50, t.shape[0]+1-N_prediction), dtype = np.double)
 
+    x_range_rigth = np.zeros((50, t.shape[0]+1-N_prediction), dtype = np.double)
+    y_interp_rigth = np.zeros((50, t.shape[0]+1-N_prediction), dtype = np.double)
+
+    #x_k  = np.zeros((1, t.shape[0]+1-N_prediction), dtype = np.double)
+    Gl_funcion  = np.zeros((1, t.shape[0]+1-N_prediction), dtype = np.double)
+    Gr_funcion  = np.zeros((1, t.shape[0]+1-N_prediction), dtype = np.double)
+
+    j = 0
+    espacio_entre_puntos = 15
     for i in range(0, t.shape[0]-N_prediction):
-            left_displacement = -0.5 * track_width
-            right_displacement = 0.5 * track_width
+        left_displacement = -0.5 * track_width
+        right_displacement = 0.5 * track_width
 
-            left_x, left_y = displace_points_along_normal(xref[0, i:i + puntos], xref[1, i:i + puntos], normal_x[i:i + puntos], normal_y[i:i + puntos], left_displacement)
-            right_x, right_y = displace_points_along_normal(xref[0, i:i + puntos], xref[1, i:i + puntos], normal_x[i:i + puntos], normal_y[i:i + puntos], right_displacement)
+        # Seleccionar puntos cada cierto espacio
+        indices = range(i, i + puntos * espacio_entre_puntos, espacio_entre_puntos)
+        left_x, left_y = displace_points_along_normal(xref[0, indices], xref[1, indices], normal_x[indices], normal_y[indices], left_displacement)
+        right_x, right_y = displace_points_along_normal(xref[0, indices], xref[1, indices], normal_x[indices], normal_y[indices], right_displacement)
 
-            # Guardar las trayectorias en las matrices de historial
-            left_poses[:, :, i] = np.array([left_x, left_y]).T
-            rigth_poses[:, :, i] = np.array([right_x, right_y]).T
+        # Guardar las trayectorias en las matrices de historial
+        left_poses[:, :, j] = np.array([left_x, left_y]).T
+        rigth_poses[:, :, j] = np.array([right_x, right_y]).T
+
+        j += 1
+            
    
     print("AQUI TA")
     for k in range(0, t.shape[0]-N_prediction):
+
+
+        ## SECCION PARA GRAFICAR Y SACAR LOS PUNTOS FUTUROS
+        
+
+        left_pos = left_poses[:, :, k]
+        rigth_pos = rigth_poses[:, :, k]
+
+        poly_func_left = np.poly1d(np.polyfit(left_pos[: , 0] , left_pos[: , 1], 1))
+        poly_func_rigth = np.poly1d(np.polyfit(rigth_pos[: , 0] , rigth_pos[: , 1], 1))
+
+        
+        #poly_func_left = CubicSpline(left_pos[: , 0], left_pos[: , 1])
+        Gl_funcion[0,k] = poly_func_left(x[0, k])
+        Gr_funcion[0,k] = poly_func_rigth(x[0, k])
+                
+        # Evaluar las funciones polinómicas en un rango de valores x para obtener curvas suavizadas
+        x_range_left[:, k] = np.linspace(min(left_pos[:, 0])-0.5, max(left_pos[:, 0])+0.5, 50)
+        y_interp_left[:, k] = poly_func_left(x_range_left[:, k])
+
+        x_range_rigth[:, k] = np.linspace(min(rigth_pos[:, 0])-0.5, max(rigth_pos[:, 0])+0.5, 50)
+        y_interp_rigth[:, k] = poly_func_rigth(x_range_rigth[:, k])
+
+    
+        print(Gl_funcion[0,k] - x[1, k])
+        
+        #COMIENZA EL PROGRAMA OPC
 
         # Control Law Section
         acados_ocp_solver.set(0, "lbx", x[:,k])
         acados_ocp_solver.set(0, "ubx", x[:,k])
 
-        left_pos = left_poses[:, :, k]
-        poly_func_left = np.poly1d(np.polyfit(left_pos[: , 0] , left_pos[: , 1], 3))
-        
-        #poly_func_left = interp1d(left_pos[:, 0], left_pos[:, 1], kind='cubic')
-        G_funcion = poly_func_left(x[0, k])
-        
-        # Evaluar las funciones polinómicas en un rango de valores x para obtener curvas suavizadas
-        x_range_left[:, k] = np.linspace(min(left_pos[:, 0])-2, max(left_pos[:, 0])+2, 50)
-        y_interp_left[:, k] = poly_func_left(x_range_left[:, k])
-
-        
-
-
-
-        print(G_funcion - x[1, k])
-        # 
         # update yref
         for j in range(N_prediction):
             yref = xref[:,k+j]
-            acados_ocp_solver.set(j, "p", np.append(yref, [G_funcion,  left_pos[0, 1], left_pos[1, 0],  left_pos[1, 1], left_pos[2, 0],  left_pos[2, 1] ]))
+            acados_ocp_solver.set(j, "p", np.append(yref, [Gl_funcion[0,k],  left_pos[0, 1], left_pos[1, 0],  left_pos[1, 1], left_pos[2, 0],  left_pos[2, 1] ]))
         
         yref_N = xref[:,k+N_prediction]
-        acados_ocp_solver.set(N_prediction, "p", np.append(yref_N, [G_funcion,  left_pos[0, 1], left_pos[1, 0],  left_pos[1, 1], left_pos[2, 0],  left_pos[2, 1] ]))
+        acados_ocp_solver.set(N_prediction, "p", np.append(yref_N, [Gl_funcion[0,k],  left_pos[0, 1], left_pos[1, 0],  left_pos[1, 1], left_pos[2, 0],  left_pos[2, 1] ]))
 
         # Get Computational Time
         tic = time.time()
@@ -392,7 +417,7 @@ def main():
 
     
     # Ejemplo de uso
-    fig3 = animate_triangle_pista(x[:3, :], xref[:2, :], left_poses[:, : , :], rigth_poses[:, :, :],x_range_left, y_interp_left, 'animation.mp4')   
+    fig3 = animate_triangle_pista(x[:3, :], xref[:2, :], left_poses[:, : , :], rigth_poses[:, :, :], x_range_left, y_interp_left, x_range_rigth, y_interp_rigth, Gl_funcion, 'animation.mp4')   
     #fig3 = animate_triangle(x[:3, :], xref[:2, :], 'animation.mp4')
 
    # plot_states(x[:3, :], xref[:3, :], 'states_plot.png')
