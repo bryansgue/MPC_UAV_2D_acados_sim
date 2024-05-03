@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-import imageio
+
 
 def animate_triangle(x, xref, save_filename):
     # Extraer los estados de posición y orientación de x

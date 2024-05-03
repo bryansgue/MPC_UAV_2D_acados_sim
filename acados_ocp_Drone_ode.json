@@ -1,7 +1,7 @@
 {
     "acados_include_path": "/home/bryansgue/acados/include",
     "acados_lib_path": "/home/bryansgue/acados/lib",
-    "code_export_directory": "/home/bryansgue/Doctoral_Research/Python/MPC_UAV_2D_acados_sim/c_generated_code",
+    "code_export_directory": "/home/bryansgue/Doctorado/Python/MPC_UAV_2D_acados_sim/c_generated_code",
     "constraints": {
         "C": [],
         "C_e": [],
@@ -48,7 +48,7 @@
         "lbx": [],
         "lbx_0": [
             0.0,
-            1.0,
+            5.0,
             0.0,
             0.0,
             0.0,
@@ -81,7 +81,7 @@
         "ubx": [],
         "ubx_0": [
             0.0,
-            1.0,
+            5.0,
             0.0,
             0.0,
             0.0,
@@ -91,7 +91,7 @@
         "ug": [],
         "ug_e": [],
         "uh": [
-            2.5
+            20.0
         ],
         "uh_e": [],
         "uphi": [],
@@ -160,7 +160,7 @@
         "ng_e": 0,
         "nh": 1,
         "nh_e": 0,
-        "np": 8,
+        "np": 14,
         "nphi": 0,
         "nphi_e": 0,
         "nr": 0,
@@ -185,7 +185,7 @@
     },
     "json_file": "acados_ocp_Drone_ode.json",
     "model": {
-        "con_h_expr": "hy",
+        "con_h_expr": "hz",
         "con_h_expr_e": null,
         "con_phi_expr": null,
         "con_phi_expr_e": null,
@@ -196,12 +196,12 @@
         "cost_conl_custom_outer_hess": null,
         "cost_conl_custom_outer_hess_0": null,
         "cost_conl_custom_outer_hess_e": null,
-        "cost_expr_ext_cost": "@1=(vertcat(nx_d, ny_d, psi_d, nx_d, ny_d, psi_d, F_d, T_d)[:6]-vertcat(hy, hz, psi, hy_p, hz_p, psi_p)), mac(mac(@1',\n[[4, 0, 0, 0, 0, 0], \n [0, 4, 0, 0, 0, 0], \n [0, 0, 0, 0, 0, 0], \n [0, 0, 0, 0, 0, 0], \n [0, 0, 0, 0, 0, 0], \n [0, 0, 0, 0, 0, 0]],zeros(1x6)),@1,0)",
-        "cost_expr_ext_cost_0": "@1=(vertcat(nx_d, ny_d, psi_d, nx_d, ny_d, psi_d, F_d, T_d)[:6]-vertcat(hy, hz, psi, hy_p, hz_p, psi_p)), mac(mac(@1',\n[[4, 0, 0, 0, 0, 0], \n [0, 4, 0, 0, 0, 0], \n [0, 0, 0, 0, 0, 0], \n [0, 0, 0, 0, 0, 0], \n [0, 0, 0, 0, 0, 0], \n [0, 0, 0, 0, 0, 0]],zeros(1x6)),@1,0)",
+        "cost_expr_ext_cost": "@1=(vertcat(nx_d, ny_d, psi_d, nx_d, ny_d, psi_d, F_d, T_d, xl_1, yl_1, xl_2, yl_2, xl_3, yl_3)[:6]-vertcat(hy, hz, psi, hy_p, hz_p, psi_p)), mac(mac(@1',\n[[4, 0, 0, 0, 0, 0], \n [0, 4, 0, 0, 0, 0], \n [0, 0, 0, 0, 0, 0], \n [0, 0, 0, 0, 0, 0], \n [0, 0, 0, 0, 0, 0], \n [0, 0, 0, 0, 0, 0]],zeros(1x6)),@1,0)",
+        "cost_expr_ext_cost_0": "@1=(vertcat(nx_d, ny_d, psi_d, nx_d, ny_d, psi_d, F_d, T_d, xl_1, yl_1, xl_2, yl_2, xl_3, yl_3)[:6]-vertcat(hy, hz, psi, hy_p, hz_p, psi_p)), mac(mac(@1',\n[[4, 0, 0, 0, 0, 0], \n [0, 4, 0, 0, 0, 0], \n [0, 0, 0, 0, 0, 0], \n [0, 0, 0, 0, 0, 0], \n [0, 0, 0, 0, 0, 0], \n [0, 0, 0, 0, 0, 0]],zeros(1x6)),@1,0)",
         "cost_expr_ext_cost_custom_hess": null,
         "cost_expr_ext_cost_custom_hess_0": null,
         "cost_expr_ext_cost_custom_hess_e": null,
-        "cost_expr_ext_cost_e": "@1=(vertcat(nx_d, ny_d, psi_d, nx_d, ny_d, psi_d, F_d, T_d)[:6]-vertcat(hy, hz, psi, hy_p, hz_p, psi_p)), mac(mac(@1',\n[[4, 0, 0, 0, 0, 0], \n [0, 4, 0, 0, 0, 0], \n [0, 0, 0, 0, 0, 0], \n [0, 0, 0, 0, 0, 0], \n [0, 0, 0, 0, 0, 0], \n [0, 0, 0, 0, 0, 0]],zeros(1x6)),@1,0)",
+        "cost_expr_ext_cost_e": "@1=(vertcat(nx_d, ny_d, psi_d, nx_d, ny_d, psi_d, F_d, T_d, xl_1, yl_1, xl_2, yl_2, xl_3, yl_3)[:6]-vertcat(hy, hz, psi, hy_p, hz_p, psi_p)), mac(mac(@1',\n[[4, 0, 0, 0, 0, 0], \n [0, 4, 0, 0, 0, 0], \n [0, 0, 0, 0, 0, 0], \n [0, 0, 0, 0, 0, 0], \n [0, 0, 0, 0, 0, 0], \n [0, 0, 0, 0, 0, 0]],zeros(1x6)),@1,0)",
         "cost_psi_expr": null,
         "cost_psi_expr_0": null,
         "cost_psi_expr_e": null,
@@ -224,14 +224,20 @@
             "purely_linear": 0
         },
         "name": "Drone_ode",
-        "p": "vertcat(nx_d, ny_d, psi_d, nx_d, ny_d, psi_d, F_d, T_d)",
+        "p": "vertcat(nx_d, ny_d, psi_d, nx_d, ny_d, psi_d, F_d, T_d, xl_1, yl_1, xl_2, yl_2, xl_3, yl_3)",
         "u": "vertcat(F, T)",
         "x": "vertcat(hy, hz, psi, hy_p, hz_p, psi_p)",
         "xdot": "vertcat(hy_p, hz_p, psi_p, hy_pp, hz_pp, psi_pp)",
         "z": "0x0"
     },
-    "p": "vertcat(nx_d, ny_d, psi_d, nx_d, ny_d, psi_d, F_d, T_d)",
+    "p": "vertcat(nx_d, ny_d, psi_d, nx_d, ny_d, psi_d, F_d, T_d, xl_1, yl_1, xl_2, yl_2, xl_3, yl_3)",
     "parameter_values": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
         0.0,
         0.0,
         0.0,

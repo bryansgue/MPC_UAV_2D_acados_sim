@@ -59,25 +59,25 @@ void casadi_fill(casadi_real* x, casadi_int n, casadi_real alpha) {
 static const casadi_int casadi_s0[10] = {6, 1, 0, 6, 0, 1, 2, 3, 4, 5};
 static const casadi_int casadi_s1[6] = {2, 1, 0, 2, 0, 1};
 static const casadi_int casadi_s2[3] = {0, 0, 0};
-static const casadi_int casadi_s3[12] = {8, 1, 0, 8, 0, 1, 2, 3, 4, 5, 6, 7};
+static const casadi_int casadi_s3[18] = {14, 1, 0, 14, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
 static const casadi_int casadi_s4[5] = {1, 1, 0, 1, 0};
-static const casadi_int casadi_s5[5] = {8, 1, 0, 1, 2};
+static const casadi_int casadi_s5[5] = {8, 1, 0, 1, 3};
 static const casadi_int casadi_s6[3] = {1, 0, 0};
 
-/* Drone_ode_constr_h_fun_jac_uxt_zt:(i0[6],i1[2],i2[],i3[8])->(o0,o1[8x1,1nz],o2[1x0]) */
+/* Drone_ode_constr_h_fun_jac_uxt_zt:(i0[6],i1[2],i2[],i3[14])->(o0,o1[8x1,1nz],o2[1x0]) */
 static int casadi_f0(const casadi_real** arg, casadi_real** res, casadi_int* iw, casadi_real* w, int mem) {
   casadi_real *rr, *ss;
   casadi_real w0, *w1=w+1, w2;
-  /* #0: @0 = input[0][0] */
-  w0 = arg[0] ? arg[0][0] : 0;
+  /* #0: @0 = input[0][1] */
+  w0 = arg[0] ? arg[0][1] : 0;
   /* #1: output[0][0] = @0 */
   if (res[0]) res[0][0] = w0;
   /* #2: @0 = zeros(8x1,1nz) */
   w0 = 0.;
   /* #3: @1 = ones(8x1) */
   casadi_fill(w1, 8, 1.);
-  /* #4: {NULL, NULL, @2, NULL, NULL, NULL, NULL, NULL} = vertsplit(@1) */
-  w2 = w1[2];
+  /* #4: {NULL, NULL, NULL, @2, NULL, NULL, NULL, NULL} = vertsplit(@1) */
+  w2 = w1[3];
   /* #5: (@0[0] = @2) */
   for (rr=(&w0)+0, ss=(&w2); rr!=(&w0)+1; rr+=1) *rr = *ss++;
   /* #6: output[1][0] = @0 */

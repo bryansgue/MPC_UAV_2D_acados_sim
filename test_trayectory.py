@@ -2,9 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def calculate_xref(t):
+    value = 5
     xref = np.zeros((2, len(t)))
-    xref[0, :] = 3 * np.sin(5 * 0.08 * t)
-    xref[1, :] = 2.5 * np.sin(0.2 * t) + 5
+    xref[0, :] = 4 * np.sin(value*0.04*t) + 3
+    xref[1, :] = 4 * np.sin(value*0.08*t)
     return xref
 
 def calculate_unit_normals(t, xref):

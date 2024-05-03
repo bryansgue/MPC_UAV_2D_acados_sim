@@ -297,7 +297,7 @@ void Drone_ode_acados_create_3_create_and_set_functions(Drone_ode_solver_capsule
         capsule->__CAPSULE_FNC__.casadi_sparsity_in = & __MODEL_BASE_FNC__ ## _sparsity_in; \
         capsule->__CAPSULE_FNC__.casadi_sparsity_out = & __MODEL_BASE_FNC__ ## _sparsity_out; \
         capsule->__CAPSULE_FNC__.casadi_work = & __MODEL_BASE_FNC__ ## _work; \
-        external_function_param_casadi_create(&capsule->__CAPSULE_FNC__ , 8); \
+        external_function_param_casadi_create(&capsule->__CAPSULE_FNC__ , 14); \
     }while(false)
 
 
@@ -471,8 +471,8 @@ void Drone_ode_acados_create_5_set_nlp_in(Drone_ode_solver_capsule* capsule, con
     double* lbx0 = lubx0;
     double* ubx0 = lubx0 + NBX0;
     // change only the non-zero elements:
-    lbx0[1] = 1;
-    ubx0[1] = 1;
+    lbx0[1] = 5;
+    ubx0[1] = 5;
 
     ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "idxbx", idxbx0);
     ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "lbx", lbx0);
@@ -551,7 +551,7 @@ void Drone_ode_acados_create_5_set_nlp_in(Drone_ode_solver_capsule* capsule, con
     lh[0] = -1000000000;
 
     
-    uh[0] = 2.5;
+    uh[0] = 20;
 
     for (int i = 0; i < N; i++)
     {
@@ -677,7 +677,7 @@ void Drone_ode_acados_create_7_set_nlp_out(Drone_ode_solver_capsule* capsule)
 
     // initialize with x0
     
-    x0[1] = 1;
+    x0[1] = 5;
 
 
     double* u0 = xu0 + NX;
@@ -820,7 +820,7 @@ int Drone_ode_acados_update_params(Drone_ode_solver_capsule* capsule, int stage,
 {
     int solver_status = 0;
 
-    int casadi_np = 8;
+    int casadi_np = 14;
     if (casadi_np != np) {
         printf("acados_update_params: trying to set %i parameters for external functions."
             " External function has %i parameters. Exiting.\n", np, casadi_np);
@@ -875,7 +875,7 @@ int Drone_ode_acados_update_params_sparse(Drone_ode_solver_capsule * capsule, in
 {
     int solver_status = 0;
 
-    int casadi_np = 8;
+    int casadi_np = 14;
     if (casadi_np < n_update) {
         printf("Drone_ode_acados_update_params_sparse: trying to set %d parameters for external functions."
             " External function has %d parameters. Exiting.\n", n_update, casadi_np);

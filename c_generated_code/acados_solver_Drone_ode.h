@@ -42,7 +42,7 @@
 #define DRONE_ODE_NX     6
 #define DRONE_ODE_NZ     0
 #define DRONE_ODE_NU     2
-#define DRONE_ODE_NP     8
+#define DRONE_ODE_NP     14
 #define DRONE_ODE_NBX    0
 #define DRONE_ODE_NBX0   6
 #define DRONE_ODE_NBU    2
