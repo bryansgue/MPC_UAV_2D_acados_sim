@@ -11,13 +11,16 @@ from casadi import vertcat
 from casadi import horzcat
 from casadi import cos
 from casadi import sin
-
+from casadi import  dot
 from casadi import nlpsol
 from casadi import sumsqr
+from casadi import power
+from casadi import diff
 from fancy_plots import plot_pose, fancy_plots_2, fancy_plots_1
 from graf_2 import animate_triangle_pista
 from graf import animate_triangle
 from plot_states import plot_states
+
 from scipy.interpolate import interp1d
 from scipy.interpolate import CubicSpline
 #from graf import animate_triangle
@@ -225,6 +228,37 @@ def displace_points_along_normal(x, y, normal_x, normal_y, displacement):
     y_prime = y + displacement * normal_y
     return x_prime, y_prime
 
+def ajustar_polinomio_grado_3(x_data, y_data):
+    # Definir variables simbólicas para los coeficientes del polinomio de grado 3
+    a = MX.sym('a', 4)
+
+    # Modelo a ajustar: polinomio de grado 3: y = a3*x^3 + a2*x^2 + a1*x + a0
+    model =   a[3] * x_data**3 + a[2] * x_data**2 + a[1] * x_data + a[0]
+
+    # Residuos (diferencia entre modelo y datos)
+    residuals = model - y_data
+
+    # Término de regularización para penalizar coeficientes grandes
+    regularization_term = 0.01 * dot(a, a)
+
+    # Término para penalizar los cambios bruscos en los coeficientes del polinomio
+    smoothness_term = 0.01 * dot(diff(a, 2), diff(a, 2))
+
+    # Función de costo: mínimos cuadrados
+    cost_function = dot(residuals, residuals) +1* regularization_term + 0* smoothness_term
+
+    # Crear un solver de optimización
+    nlp = {'x': a, 'f': cost_function}
+    solver = nlpsol('solver', 'ipopt', nlp)
+
+    # Resolver el problema de optimización
+    initial_guess = [0.0, 0.0, 0.0, 0.0]  # Valores iniciales para los coeficientes del polinomio
+    solution = solver(x0=initial_guess)
+
+    # Obtener los valores ajustados de los coeficientes del polinomio
+    a_sol = solution['x']
+    
+    return a_sol
 
 def main():
 
@@ -275,15 +309,15 @@ def main():
     # Reference Trajectory
     # Reference Signal of the system
     xref = np.zeros((8, t.shape[0]), dtype = np.double)
-    xref[0, :] = 4 * np.sin(5*0.03*t) 
-    xref[1, :] = 3 * np.sin(5*0.06*t) + 5
+    xref[0, :] = 4 * np.sin(9 * 0.025 * t) 
+    xref[1, :] = 3 * np.sin(9 * 0.05 * t) + 5
     xref[2,:] = 45*(np.pi)/180
     xref[3,:] = 0.0 
     xref[4,:] = 0.0
     xref[5,:] = 0.0
 
     # Definir matriz de rotación para 45 grados en sentido antihorario
-    theta = np.radians(0)
+    theta = np.radians(15)
     rotation_matrix = np.array([[np.cos(theta), -np.sin(theta)],
                                 [np.sin(theta), np.cos(theta)]])
     
@@ -319,7 +353,7 @@ def main():
     
     #GENERACION DE LA PISTA
     normal_x, normal_y = calculate_unit_normals(t, xref)
-    track_width = 0.8
+    track_width = 1
     
     # Simulation System
 
@@ -327,8 +361,8 @@ def main():
     # Crear una matriz de matrices para almacenar las coordenadas (x, y) de cada punto para cada instante k
     puntos = 5
     
-    left_poses = np.empty((puntos, 2, t.shape[0]+1-N_prediction), dtype = np.double)
-    rigth_poses = np.empty((puntos, 2, t.shape[0]+1-N_prediction), dtype = np.double)
+    left_poses = np.empty((puntos+1, 2, t.shape[0]+1-N_prediction), dtype = np.double)
+    rigth_poses = np.empty((puntos+1, 2, t.shape[0]+1-N_prediction), dtype = np.double)
 
     x_range_left = np.zeros((50, t.shape[0]+1-N_prediction), dtype = np.double)
     y_interp_left = np.zeros((50, t.shape[0]+1-N_prediction), dtype = np.double)
@@ -341,13 +375,13 @@ def main():
     Gr_funcion  = np.zeros((1, t.shape[0]+1-N_prediction), dtype = np.double)
 
     j = 0
-    espacio_entre_puntos = 15
-    for i in range(0, t.shape[0]-N_prediction):
+    espacio_entre_puntos = 10
+    for i in range(1, t.shape[0] - N_prediction):
         left_displacement = -0.5 * track_width
         right_displacement = 0.5 * track_width
 
         # Seleccionar puntos cada cierto espacio
-        indices = range(i, i + puntos * espacio_entre_puntos, espacio_entre_puntos)
+        indices = range(i - 1, i + puntos * espacio_entre_puntos, espacio_entre_puntos)  # Aquí se agrega el punto anterior
         left_x, left_y = displace_points_along_normal(xref[0, indices], xref[1, indices], normal_x[indices], normal_y[indices], left_displacement)
         right_x, right_y = displace_points_along_normal(xref[0, indices], xref[1, indices], normal_x[indices], normal_y[indices], right_displacement)
 
@@ -356,6 +390,7 @@ def main():
         rigth_poses[:, :, j] = np.array([right_x, right_y]).T
 
         j += 1
+
             
    
     print("AQUI TA")
@@ -363,28 +398,25 @@ def main():
 
 
         ## SECCION PARA GRAFICAR Y SACAR LOS PUNTOS FUTUROS
-        
-
         left_pos = left_poses[:, :, k]
         rigth_pos = rigth_poses[:, :, k]
 
-        poly_func_left = np.poly1d(np.polyfit(left_pos[: , 0] , left_pos[: , 1], 1))
-        poly_func_rigth = np.poly1d(np.polyfit(rigth_pos[: , 0] , rigth_pos[: , 1], 1))
-
+        a_sol = ajustar_polinomio_grado_3(left_pos[: , 0], left_pos[: , 1])
+        b_sol = ajustar_polinomio_grado_3(rigth_pos[: , 0], rigth_pos[: , 1])
         
-        #poly_func_left = CubicSpline(left_pos[: , 0], left_pos[: , 1])
-        Gl_funcion[0,k] = poly_func_left(x[0, k])
-        Gr_funcion[0,k] = poly_func_rigth(x[0, k])
-                
-        # Evaluar las funciones polinómicas en un rango de valores x para obtener curvas suavizadas
-        x_range_left[:, k] = np.linspace(min(left_pos[:, 0])-0.5, max(left_pos[:, 0])+0.5, 50)
-        y_interp_left[:, k] = poly_func_left(x_range_left[:, k])
+        # Graficar los datos y la curva ajustada
+        x_range_left[:, k] = np.linspace(min(left_pos[: , 0])-1, max(left_pos[: , 0])+1, 50)
+        #y_interp_left[:, k]  = (a_sol[3]*power(x_range_left[:, k], 3) + a_sol[2]*power(x_range_left[:, k], 2) + a_sol[1]*x_range_left[:, k] + a_sol[0]).T
+        y_interp_left[:, k]  = np.polyval(a_sol[::-1], x_range_left[:, k])
 
-        x_range_rigth[:, k] = np.linspace(min(rigth_pos[:, 0])-0.5, max(rigth_pos[:, 0])+0.5, 50)
-        y_interp_rigth[:, k] = poly_func_rigth(x_range_rigth[:, k])
-
-    
-        print(Gl_funcion[0,k] - x[1, k])
+        x_range_rigth[:, k] = np.linspace(min(rigth_pos[: , 0])-1, max(rigth_pos[: , 0])+1, 50)
+        #y_interp_rigth[:, k]  = (b_sol[3]*power(x_range_rigth[:, k], 3) + b_sol[2]*power(x_range_rigth[:, k], 2) + b_sol[1]*x_range_rigth[:, k] + b_sol[0]).T
+        y_interp_rigth[:, k]  = np.polyval(b_sol[::-1], x_range_rigth[:, k])
+        
+        Gl_funcion[0,k] = 1
+        Gr_funcion[0,k] = 1
+                  
+        print(k)
         
         #COMIENZA EL PROGRAMA OPC
 
