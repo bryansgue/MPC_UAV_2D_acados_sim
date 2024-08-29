@@ -261,7 +261,7 @@ def main():
 
     # Ejemplo de uso
 
-    #animate_triangle(x[:3, :], xref[:2, :], 'animation.gif')
+    animate_triangle(x[:3, :], xref[:2, :], 'animation.gif')
         
     fig1 = plot_pose(x, xref, t)
     fig1.savefig("1_pose.png")

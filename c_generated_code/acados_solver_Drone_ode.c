@@ -611,7 +611,7 @@ void Drone_ode_acados_create_6_set_opts(Drone_ode_solver_capsule* capsule)
 
     // set up sim_method_num_steps
     // all sim_method_num_steps are identical
-    int sim_method_num_steps = 3;
+    int sim_method_num_steps = 1;
     for (int i = 0; i < N; i++)
         ocp_nlp_solver_opts_set_at_stage(nlp_config, nlp_opts, i, "dynamics_num_steps", &sim_method_num_steps);
 

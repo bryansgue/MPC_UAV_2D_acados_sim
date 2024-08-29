@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-def animate_triangle_pista(x, xref, left_poses, right_poses, x_range_left, y_interp_left, x_range_rigth, y_interp_rigth, Gl_funcion, save_filename):
+def animate_triangle_pista(x, xref, left_poses, right_poses, save_filename):
     # Extraer los estados de posición y orientación de x
     y_positions = x[0, :]
     z_positions = x[1, :]
@@ -25,13 +25,6 @@ def animate_triangle_pista(x, xref, left_poses, right_poses, x_range_left, y_int
     # Inicializar los puntos izquierdos y derechos
     left_points, = ax.plot([], [], 'bo', markersize=3, label='Puntos izquierdos')
     right_points, = ax.plot([], [], 'ro', markersize=3, label='Puntos derechos')
-
-    # Inicializar la curva generada por el polinomio
-    poly_line, = ax.plot([], [], 'm-', lw=2, label='Curva generada por el polinomio')
-    poly_line_r, = ax.plot([], [], 'm-', lw=2, label='Curva generada por el polinomio 2')
-
-    # Inicializar la posición de x_k como un punto
-    x_k_point, = ax.plot([], [], 'ko', markersize=5)
 
     # Función de animación que actualiza la posición y orientación del triángulo en cada cuadro
     def animate(i):
@@ -71,19 +64,13 @@ def animate_triangle_pista(x, xref, left_poses, right_poses, x_range_left, y_int
         left_points.set_data(left_pos[:, 0], left_pos[:, 1])
         right_points.set_data(right_pos[:, 0], right_pos[:, 1])
 
-        # Actualizar la curva generada por el polinomio
-        poly_line.set_data(x_range_left[:,i], y_interp_left[:,i])
-        poly_line_r.set_data(x_range_rigth[:,i], y_interp_rigth[:,i])
-
-
-
-        # Actualizar la posición de x_k en el gráfico
-        x_k_point.set_data(y_positions[i], Gl_funcion[0,i])
-
-        return triangle, xref_line, x_line, left_points, right_points, poly_line, poly_line_r, x_k_point
+        return triangle, xref_line, x_line, left_points, right_points
 
     # Crear la animación
     anim = animation.FuncAnimation(fig, animate, frames=num_frames, interval=0.5 * 100)
 
     # Guardar la animación en un archivo MP4
     anim.save(save_filename, writer='ffmpeg', codec='h264', fps=10)
+
+# Ejemplo de uso de la función:
+# animate_triangle_pista(x, xref, left_poses, right_poses, 'animation.mp4')
