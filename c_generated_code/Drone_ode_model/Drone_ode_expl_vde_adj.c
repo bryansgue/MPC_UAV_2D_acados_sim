@@ -67,10 +67,10 @@ void casadi_copy(const casadi_real* x, casadi_int n, casadi_real* y) {
 
 static const casadi_int casadi_s0[10] = {6, 1, 0, 6, 0, 1, 2, 3, 4, 5};
 static const casadi_int casadi_s1[6] = {2, 1, 0, 2, 0, 1};
-static const casadi_int casadi_s2[18] = {14, 1, 0, 14, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
+static const casadi_int casadi_s2[16] = {12, 1, 0, 12, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
 static const casadi_int casadi_s3[10] = {8, 1, 0, 6, 2, 3, 4, 5, 6, 7};
 
-/* Drone_ode_expl_vde_adj:(i0[6],i1[6],i2[2],i3[14])->(o0[8x1,6nz]) */
+/* Drone_ode_expl_vde_adj:(i0[6],i1[6],i2[2],i3[12])->(o0[8x1,6nz]) */
 static int casadi_f0(const casadi_real** arg, casadi_real** res, casadi_int* iw, casadi_real* w, int mem) {
   casadi_int i, j, k;
   casadi_real *rr, *ss, *tt;

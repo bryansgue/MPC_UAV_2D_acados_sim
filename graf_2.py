@@ -14,7 +14,7 @@ def animate_triangle_pista(x, xref, left_poses, right_poses, save_filename):
     # Crear la figura y el eje
     fig, ax = plt.subplots(figsize=(12, 9))
     ax.set_xlim(-5, 5)
-    ax.set_ylim(-1.0, 10.0)
+    ax.set_ylim(-6.0, 6)
 
     # Inicializar el triángulo como un triángulo vacío
     triangle = plt.Polygon([[0, 0], [-0.5, 1], [0.5, 1]], closed=True, color='r')

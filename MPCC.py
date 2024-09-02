@@ -20,6 +20,9 @@ from fancy_plots import plot_pose, fancy_plots_2, fancy_plots_1
 from graf_2 import animate_triangle_pista
 from graf import animate_triangle
 from plot_states import plot_states
+from scipy.integrate import quad
+from scipy.optimize import bisect
+from casadi import dot, norm_2, mtimes, DM, SX, MX,  if_else
 
 from scipy.interpolate import interp1d
 from scipy.interpolate import CubicSpline
@@ -65,15 +68,14 @@ def f_system_model():
     F_d = MX.sym('F_d')
     T_d = MX.sym('T_d')
 
-    xl_1 = MX.sym('xl_1')
-    yl_1 = MX.sym('yl_1')
-    xl_2 = MX.sym('xl_2')
-    yl_2 = MX.sym('yl_2')
-    xl_3 = MX.sym('xl_3')
-    yl_3 = MX.sym('yl_3')
-
+    el_x = MX.sym('el_x')
+    el_y = MX.sym('el_y')
+    ec_x = MX.sym('ec_x')
+    ec_y = MX.sym('ec_y')
     
-    p = vertcat(nx_d, ny_d, psi_d, nx_p_d, ny_p_d, psi_p_d, F_d , T_d , xl_1 , yl_1, xl_2 , yl_2,  xl_3 , yl_3 )
+    theta_p = MX.sym('theta_p')
+
+    p = vertcat(nx_d, ny_d, psi_d, nx_p_d, ny_p_d, psi_p_d, F_d , T_d , el_x, el_y, ec_x, ec_y, theta_p)
 
     # Dynamic of the system
     R_system = MX.zeros(6, 2)
@@ -135,7 +137,7 @@ def create_ocp_solver_description(x0, N_horizon, t_horizon, bounded) -> AcadosOc
     # Calcula las dimensiones
     nx = model.x.shape[0]
     nu = model.u.shape[0]
-    variables_adicionales = 6
+    variables_adicionales = 5
     ny = nx + nu + variables_adicionales
 
     # set dimensions
@@ -143,55 +145,44 @@ def create_ocp_solver_description(x0, N_horizon, t_horizon, bounded) -> AcadosOc
     ocp.parameter_values = np.zeros(ny)
 
     # set cost
-    Q_mat = 4 * np.diag([1, 1, 0, 0.0, 0.0, 0.0])  # [x,th,dx,dth]
-    R_mat = 0*0.0000001 * np.diag([1,  1])
+    Q_mat = 1.5 * np.diag([1, 1])  # [x,th,dx,dth]
+    R_mat = 0.00001 * np.diag([1,  1])
 
+    # Define matrices de ganancia para los errores
+    Q_el = 10 * np.eye(2)  # Ganancia para el error el (2x2)
+    Q_ec = 10* np.eye(2)  # Ganancia para el error ec (2x2)
+    Q_theta_p = 500  # Ganancia para theta_p (escalar)
+    R_u = 0.01 * np.diag([1, 1])
+
+    # Definir los errores como vectores
+ 
+
+    # Definir variables simbólicas  
     ocp.cost.cost_type = "EXTERNAL"
     ocp.cost.cost_type_e = "EXTERNAL"
     
-    error_pose = ocp.p[0:6] - model.x[0:6]
-    ocp.model.cost_expr_ext_cost = error_pose.T @ Q_mat @error_pose  + model.u.T @ R_mat @ model.u 
-    ocp.model.cost_expr_ext_cost_e = error_pose.T @ Q_mat @ error_pose
+    #ERROR DE POSICION
+    sd = ocp.p[0:2]
+    error_pose = sd - model.x[0:2]
 
-    # Definir el tipo de restricciones
-    ocp.constraints.constr_type = 'BGH'
+    #ERROR DE ARRASTRE
+    sd_p = ocp.p[3:5]
+    tangent_normalized = sd_p / norm_2(sd_p)
+    el = dot(tangent_normalized, error_pose) * tangent_normalized
 
-    #Funcion de restriccion
-    u = model.u
-    x = model.x[0:3]
+    # ERROR DE CONTORNO
+    I = MX.eye(2) 
+    P_ec = I - tangent_normalized.T @ tangent_normalized
+    ec = P_ec @ error_pose 
 
-    # Definir variables simbólicas
-    xl_1 = ocp.p[8,0] 
-    yl_1 = ocp.p[9,0]
-    xl_2 = ocp.p[10,0]
-    yl_2 = ocp.p[11,0]
-    xl_3 = ocp.p[12,0]
-    yl_3 = ocp.p[13,0]
+    # Define el costo externo considerando los errores como vectores
+    error_pos = 0*error_pose.T @ Q_mat @error_pose 
+    error_contorno = 1*ec.T @ Q_ec @ ec
+    error_lag = 1*el.T @ Q_el @ el
+    ocp.model.cost_expr_ext_cost = (error_contorno + error_lag + 1*model.u.T @ R_u @ model.u )#- Q_theta_p * theta_p**2 )
+    ocp.model.cost_expr_ext_cost_e = (error_contorno + error_lag) # -  Q_theta_p * theta_p**2 )
 
-    poly = ocp.p[8,0]
-    
-    # Calcular el número de restricciones
-    constraints = vertcat(model.x[1])
-    Dim_constraints = 1
-
-    # Establecer la expresión de las restricciones en el modelo
-    ocp.model.con_h_expr = constraints
-
-    # Configurar los pesos de costo de las restricciones
-    cost_weights = np.ones(Dim_constraints)
-    ocp.cost.Zl = 1e3 * cost_weights
-    ocp.cost.Zu = 1e3 * cost_weights
-    ocp.cost.zl = cost_weights
-    ocp.cost.zu = cost_weights
-
-    # Configurar los límites inferior y superior de las restricciones
-    ocp.constraints.lh = -1e9 * np.ones(Dim_constraints)  # límite inferior (min)
-    ocp.constraints.uh = 20 * np.ones(Dim_constraints)   # límite superior (max)
-
-    # Configurar los índices de las restricciones
-    ocp.constraints.idxsh = np.arange(Dim_constraints)
-
-    
+        
     ocp.constraints.x0 = x0
 
     # set constraints
@@ -204,10 +195,6 @@ def create_ocp_solver_description(x0, N_horizon, t_horizon, bounded) -> AcadosOc
     ocp.solver_options.hessian_approx = "GAUSS_NEWTON"  # 'GAUSS_NEWTON', 'EXACT'
     ocp.solver_options.integrator_type = "ERK"
     ocp.solver_options.nlp_solver_type = "SQP_RTI"  # SQP_RTI, SQP
-    #ocp.solver_options.sim_method_num_stages = 4
-    #ocp.solver_options.sim_method_num_steps = 3
-    ocp.solver_options.nlp_solver_max_iter = 100
-    ocp.solver_options.levenberg_marquardt = 1e-2
 
     # set prediction horizon
     ocp.solver_options.tf = t_horizon
@@ -228,58 +215,95 @@ def displace_points_along_normal(x, y, normal_x, normal_y, displacement):
     y_prime = y + displacement * normal_y
     return x_prime, y_prime
 
-def ajustar_polinomio_grado_3(x_data, y_data):
-    # Definir variables simbólicas para los coeficientes del polinomio de grado 3
-    a = MX.sym('a', 4)
 
-    # Modelo a ajustar: polinomio de grado 3: y = a3*x^3 + a2*x^2 + a1*x + a0
-    model =   a[3] * x_data**3 + a[2] * x_data**2 + a[1] * x_data + a[0]
 
-    # Residuos (diferencia entre modelo y datos)
-    residuals = model - y_data
+# Definir el valor global
+value = 21
 
-    # Término de regularización para penalizar coeficientes grandes
-    regularization_term = 0.01 * dot(a, a)
+def trayectoria(t):
+    """ Crea y retorna las funciones para la trayectoria y sus derivadas. """
+    def xd(t):
+        return 4 * np.sin(value * 0.04 * t) + 1
 
-    # Término para penalizar los cambios bruscos en los coeficientes del polinomio
-    smoothness_term = 0.01 * dot(diff(a, 2), diff(a, 2))
+    def yd(t):
+        return 4 * np.sin(value * 0.08 * t)
 
-    # Función de costo: mínimos cuadrados
-    cost_function = dot(residuals, residuals) +1* regularization_term + 0* smoothness_term
+    def zd(t):
+        return 2 * np.sin(value * 0.08 * t) + 6
 
-    # Crear un solver de optimización
-    nlp = {'x': a, 'f': cost_function}
-    solver = nlpsol('solver', 'ipopt', nlp)
+    def xd_p(t):
+        return 4 * value * 0.04 * np.cos(value * 0.04 * t)
 
-    # Resolver el problema de optimización
-    initial_guess = [0.0, 0.0, 0.0, 0.0]  # Valores iniciales para los coeficientes del polinomio
-    solution = solver(x0=initial_guess)
+    def yd_p(t):
+        return 4 * value * 0.08 * np.cos(value * 0.08 * t)
 
-    # Obtener los valores ajustados de los coeficientes del polinomio
-    a_sol = solution['x']
-    
-    return a_sol
+    def zd_p(t):
+        return 2 * value * 0.08 * np.cos(value * 0.08 * t)
+
+    return xd, yd, zd, xd_p, yd_p, zd_p
+
+def r(t, xd, yd, zd):
+    """ Devuelve el punto en la trayectoria para el parámetro t usando las funciones de trayectoria. """
+    return np.array([xd(t), yd(t), zd(t)])
+
+def r_prime(t, xd_p, yd_p, zd_p):
+    """ Devuelve la derivada de la trayectoria en el parámetro t usando las derivadas de las funciones de trayectoria. """
+    return np.array([xd_p(t), yd_p(t), zd_p(t)])
+
+def integrand(t, xd_p, yd_p, zd_p):
+    """ Devuelve la norma de la derivada de la trayectoria en el parámetro t. """
+    return np.linalg.norm(r_prime(t, xd_p, yd_p, zd_p))
+
+def arc_length(tk, t0=0, xd_p=None, yd_p=None, zd_p=None):
+    """ Calcula la longitud de arco desde t0 hasta tk usando las derivadas de la trayectoria. """
+    length, _ = quad(integrand, t0, tk, args=(xd_p, yd_p, zd_p))
+    return length
+
+def find_t_for_length(theta, t0=0, t_max=None, xd_p=None, yd_p=None, zd_p=None):
+    """ Encuentra el parámetro t que corresponde a una longitud de arco theta. """
+    func = lambda t: arc_length(t, t0, xd_p=xd_p, yd_p=yd_p, zd_p=zd_p) - theta
+    return bisect(func, t0, t_max)
+
+def length_to_point(theta, t0=0, t_max=None, xd=None, yd=None, zd=None, xd_p=None, yd_p=None, zd_p=None):
+    """ Convierte una longitud de arco theta a un punto en la trayectoria. """
+    tk = find_t_for_length(theta, t0, t_max, xd_p=xd_p, yd_p=yd_p, zd_p=zd_p)
+    return r(tk, xd, yd, zd)
+
+def calculate_positions_in_arc_length(xd, yd, zd, xd_p, yd_p, zd_p, t_range, t_max):
+    """ Calcula los puntos en la trayectoria y la longitud de arco para cada instante en t_range. """
+    positions = []
+    arc_lengths = []
+    for tk in t_range:
+        theta = arc_length(tk, xd_p=xd_p, yd_p=yd_p, zd_p=zd_p)
+        arc_lengths.append(theta)
+        point = length_to_point(theta, t_max=t_max, xd=xd, yd=yd, zd=zd, xd_p=xd_p, yd_p=yd_p, zd_p=zd_p)
+        positions.append(point)
+    return np.array(arc_lengths), np.array(positions).T
+
+def calculate_orthogonal_error(error_total, tangent):
+
+    if np.linalg.norm(tangent) == 0:
+        return error_total  # No hay tangente válida, devolver el error total
+    # Matriz de proyección ortogonal
+    I = np.eye(2)  # Matriz identidad en 3D
+    P_ec = I - np.outer(tangent, tangent)
+    # Aplicar la matriz de proyección para obtener el error ortogonal
+    e_c = P_ec @ error_total
+    return e_c
 
 def main():
 
     plt.figure(figsize=(10, 5))
     # Initial Values System
-    # Simulation Time
-    t_final = 20
-    # Sample time
-    frecuencia = 30
-    t_s = 1/frecuencia
-    # Prediction Time
-    #t_prediction= 2
-    Horizont = 100
-
-    t_prediction = Horizont/frecuencia
+    t_final = 15
+    frec = 30
+    t_s = 1 / frec  # Sample time
+    N_horizont = 30
+    t_prediction = N_horizont / frec
 
     # Nodes inside MPC
-    #N = np.arange(0, t_prediction + t_s, t_s)
     N = np.arange(0, t_prediction + t_s, t_s)
-    N_prediction = N.shape[0] #  devuelve la longitud o cantidad de elementos en N.
-    print(N_prediction)
+    N_prediction = N.shape[0]
 
     # Time simulation
     t = np.arange(0, t_final + t_s, t_s)
@@ -294,35 +318,34 @@ def main():
     I_xx = 0.02
     L = [g, m0, I_xx]
 
-
     # Vector Initial conditions
     x = np.zeros((6, t.shape[0]+1-N_prediction), dtype = np.double)
-    x[0,0] = 0
-    x[1,0] = 5.0
-    x[2,0] = 0*(np.pi)/180
-    x[3,0] = 0.0
-    x[4,0] = 0.0
-    x[5,0] = 0.0
+
     # Initial Control values
     u_control = np.zeros((2, t.shape[0]-N_prediction), dtype = np.double)
+    #x_fut = np.ndarray((6, N_prediction+1))
+    x_fut = np.zeros((6, 1, N_prediction+1))
 
-    # Reference Trajectoryz
-    # Reference Signal of the system
-    xref = np.zeros((8, t.shape[0]), dtype = np.double)
-    xref[0, :] = 4 * np.sin(9 * 0.025 * t) 
-    xref[1, :] = 3 * np.sin(9 * 0.05 * t) + 5
-    xref[2,:] = 45*(np.pi)/180
-    xref[3,:] = 0.0 
-    xref[4,:] = 0.0
-    xref[5,:] = 0.0
+    xd, yd, zd, xd_p, yd_p, zd_p = trayectoria(t)
 
-    # Definir matriz de rotación para 45 grados en sentido antihorario
-    theta = np.radians(15)
-    rotation_matrix = np.array([[np.cos(theta), -np.sin(theta)],
-                                [np.sin(theta), np.cos(theta)]])
-    
-    # Rotar las primeras dos filas de la referencia
-    xref[:2, :] = np.dot(rotation_matrix, xref[:2, :])
+    # Inicializar xref
+    xref = np.zeros((8, t.shape[0]), dtype=np.double)
+
+
+    # Calcular posiciones parametrizadas en longitud de arco
+    arc_lengths, pos_ref= calculate_positions_in_arc_length(xd, yd, zd, xd_p, yd_p, zd_p, t, t_max=t_final)
+    dp_ds = np.gradient(pos_ref, arc_lengths, axis=1)
+    # Calcular las derivadas de las posiciones con respecto a la longitud de arco
+
+
+    xref[0, :] = pos_ref[0, :]  
+    xref[1, :] = pos_ref[1, :]  
+
+    xref[3,:] = dp_ds [0, :]     
+    xref[4,:] = dp_ds [1, :]    
+
+    # Inicializar el array para almacenar v_theta
+    v_theta = np.zeros(len(t))
 
     # Load the model of the system
     model, f = f_system_model()
@@ -331,7 +354,7 @@ def main():
     f_max = 3*m0*g
     f_min = 0
 
-    t_max = 0.5
+    t_max = 0.3
     t_min = -t_max 
 
     bounded = [f_max, f_min, t_max, t_min]
@@ -340,8 +363,6 @@ def main():
     ocp = create_ocp_solver_description(x[:,0], N_prediction, t_prediction, bounded)
     acados_ocp_solver = AcadosOcpSolver(ocp, json_file="acados_ocp_" + ocp.model.name + ".json", build= True, generate= True)
 
-    # Init states system
-    # Dimentions System
     nx = ocp.model.x.size()[0]
     nu = ocp.model.u.size()[0]
 
@@ -351,76 +372,43 @@ def main():
     for stage in range(N_prediction):
         acados_ocp_solver.set(stage, "u", np.zeros((nu,)))
     
-    #GENERACION DE LA PISTA
-    normal_x, normal_y = calculate_unit_normals(t, xref)
-    track_width = 1
     
-    # Simulation System
-
-
     # Crear una matriz de matrices para almacenar las coordenadas (x, y) de cada punto para cada instante k
     puntos = 5
     
     left_poses = np.empty((puntos+1, 2, t.shape[0]+1-N_prediction), dtype = np.double)
     rigth_poses = np.empty((puntos+1, 2, t.shape[0]+1-N_prediction), dtype = np.double)
 
-    x_range_left = np.zeros((50, t.shape[0]+1-N_prediction), dtype = np.double)
-    y_interp_left = np.zeros((50, t.shape[0]+1-N_prediction), dtype = np.double)
-
-    x_range_rigth = np.zeros((50, t.shape[0]+1-N_prediction), dtype = np.double)
-    y_interp_rigth = np.zeros((50, t.shape[0]+1-N_prediction), dtype = np.double)
-
-    #x_k  = np.zeros((1, t.shape[0]+1-N_prediction), dtype = np.double)
-    Gl_funcion  = np.zeros((1, t.shape[0]+1-N_prediction), dtype = np.double)
-    Gr_funcion  = np.zeros((1, t.shape[0]+1-N_prediction), dtype = np.double)
-
     j = 0
-    espacio_entre_puntos = 10
-    for i in range(1, t.shape[0] - N_prediction):
-        left_displacement = -0.5 * track_width
-        right_displacement = 0.5 * track_width
 
-        # Seleccionar puntos cada cierto espacio
-        indices = range(i - 1, i + puntos * espacio_entre_puntos, espacio_entre_puntos)  # Aquí se agrega el punto anterior
-        left_x, left_y = displace_points_along_normal(xref[0, indices], xref[1, indices], normal_x[indices], normal_y[indices], left_displacement)
-        right_x, right_y = displace_points_along_normal(xref[0, indices], xref[1, indices], normal_x[indices], normal_y[indices], right_displacement)
 
-        # Guardar las trayectorias en las matrices de historial
-        left_poses[:, :, j] = np.array([left_x, left_y]).T
-        rigth_poses[:, :, j] = np.array([right_x, right_y]).T
-
-        j += 1
-
-            
-   
     print("AQUI TA")
     for k in range(0, t.shape[0]-N_prediction):
 
-
-        ## SECCION PARA GRAFICAR Y SACAR LOS PUNTOS FUTUROS
-        left_pos = left_poses[:, :, k]
-        rigth_pos = rigth_poses[:, :, k]
-
-
-        
-        Gl_funcion[0,k] = 1
-        Gr_funcion[0,k] = 1
-                  
-        print(k)
-        
-        #COMIENZA EL PROGRAMA OPC
-
+                 
         # Control Law Section
         acados_ocp_solver.set(0, "lbx", x[:,k])
         acados_ocp_solver.set(0, "ubx", x[:,k])
 
+        for i in range(N_prediction):
+            x_fut[:, 0, i] = acados_ocp_solver.get(i, "x")
+
+        
+        x_fut[:, 0, N_prediction] = acados_ocp_solver.get(N_prediction, "x")
+
+        print("CACA")
+        
         # update yref
         for j in range(N_prediction):
+
             yref = xref[:,k+j]
-            acados_ocp_solver.set(j, "p", np.append(yref, [Gl_funcion[0,k],  left_pos[0, 1], left_pos[1, 0],  left_pos[1, 1], left_pos[2, 0],  left_pos[2, 1] ]))
+
+            parameters = np.hstack([yref, 0,0, 0,0, 0])
+            acados_ocp_solver.set(j, "p", parameters)
         
         yref_N = xref[:,k+N_prediction]
-        acados_ocp_solver.set(N_prediction, "p", np.append(yref_N, [Gl_funcion[0,k],  left_pos[0, 1], left_pos[1, 0],  left_pos[1, 1], left_pos[2, 0],  left_pos[2, 1] ]))
+        parameters_N = np.hstack([yref_N, 0,0, 0,0, 0])
+        acados_ocp_solver.set(N_prediction, "p", parameters_N)
 
         # Get Computational Time
         tic = time.time()
@@ -428,7 +416,6 @@ def main():
         status = acados_ocp_solver.solve()
 
         toc = time.time()- tic
-        #print(toc)
 
         # Get Control Signal
         u_control[:, k] = acados_ocp_solver.get(0, "u")
@@ -436,15 +423,11 @@ def main():
         x[:, k+1] = f_d(x[:, k], u_control[:, k], t_s, f)
         delta_t[:, k] = toc
 
+        print(k)
 
-    
     # Ejemplo de uso
     fig3 = animate_triangle_pista(x[:3, :], xref[:2, :], left_poses[:, : , :], rigth_poses[:, :, :], 'animation.mp4')   
-    #fig3 = animate_triangle(x[:3, :], xref[:2, :], 'animation.mp4')
 
-   # plot_states(x[:3, :], xref[:3, :], 'states_plot.png')
-
-     
     fig1 = plot_pose(x, xref, t)
     fig1.savefig("1_pose.png")
 
