@@ -40,7 +40,7 @@
 #define DRONE_ODE_NX     6
 #define DRONE_ODE_NZ     0
 #define DRONE_ODE_NU     2
-#define DRONE_ODE_NP     12
+#define DRONE_ODE_NP     13
 
 #ifdef __cplusplus
 extern "C" {

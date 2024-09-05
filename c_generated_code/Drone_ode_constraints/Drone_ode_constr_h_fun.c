@@ -29,7 +29,6 @@ extern "C" {
 #define casadi_s1 CASADI_PREFIX(s1)
 #define casadi_s2 CASADI_PREFIX(s2)
 #define casadi_s3 CASADI_PREFIX(s3)
-#define casadi_s4 CASADI_PREFIX(s4)
 
 /* Symbol visibility in DLLs */
 #ifndef CASADI_SYMBOL_EXPORT
@@ -49,40 +48,19 @@ extern "C" {
 static const casadi_int casadi_s0[10] = {6, 1, 0, 6, 0, 1, 2, 3, 4, 5};
 static const casadi_int casadi_s1[6] = {2, 1, 0, 2, 0, 1};
 static const casadi_int casadi_s2[3] = {0, 0, 0};
-static const casadi_int casadi_s3[16] = {12, 1, 0, 12, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-static const casadi_int casadi_s4[8] = {4, 1, 0, 4, 0, 1, 2, 3};
+static const casadi_int casadi_s3[17] = {13, 1, 0, 13, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
 
-/* Drone_ode_constr_h_fun:(i0[6],i1[2],i2[],i3[12])->(o0[4]) */
+/* Drone_ode_constr_h_fun:(i0[6],i1[2],i2[],i3[13])->(o0[2]) */
 static int casadi_f0(const casadi_real** arg, casadi_real** res, casadi_int* iw, casadi_real* w, int mem) {
-  casadi_real w0, w1, w2;
-  /* #0: @0 = input[3][8] */
-  w0 = arg[3] ? arg[3][8] : 0;
-  /* #1: @1 = input[0][0] */
-  w1 = arg[0] ? arg[0][0] : 0;
-  /* #2: @0 = (@0-@1) */
-  w0 -= w1;
-  /* #3: output[0][0] = @0 */
+  casadi_real w0;
+  /* #0: @0 = input[0][3] */
+  w0 = arg[0] ? arg[0][3] : 0;
+  /* #1: output[0][0] = @0 */
   if (res[0]) res[0][0] = w0;
-  /* #4: @0 = input[3][9] */
-  w0 = arg[3] ? arg[3][9] : 0;
-  /* #5: @2 = input[0][1] */
-  w2 = arg[0] ? arg[0][1] : 0;
-  /* #6: @0 = (@0-@2) */
-  w0 -= w2;
-  /* #7: output[0][1] = @0 */
+  /* #2: @0 = input[0][4] */
+  w0 = arg[0] ? arg[0][4] : 0;
+  /* #3: output[0][1] = @0 */
   if (res[0]) res[0][1] = w0;
-  /* #8: @0 = input[3][10] */
-  w0 = arg[3] ? arg[3][10] : 0;
-  /* #9: @1 = (@1-@0) */
-  w1 -= w0;
-  /* #10: output[0][2] = @1 */
-  if (res[0]) res[0][2] = w1;
-  /* #11: @1 = input[3][11] */
-  w1 = arg[3] ? arg[3][11] : 0;
-  /* #12: @2 = (@2-@1) */
-  w2 -= w1;
-  /* #13: output[0][3] = @2 */
-  if (res[0]) res[0][3] = w2;
   return 0;
 }
 
@@ -153,16 +131,16 @@ CASADI_SYMBOL_EXPORT const casadi_int* Drone_ode_constr_h_fun_sparsity_in(casadi
 
 CASADI_SYMBOL_EXPORT const casadi_int* Drone_ode_constr_h_fun_sparsity_out(casadi_int i) {
   switch (i) {
-    case 0: return casadi_s4;
+    case 0: return casadi_s1;
     default: return 0;
   }
 }
 
 CASADI_SYMBOL_EXPORT int Drone_ode_constr_h_fun_work(casadi_int *sz_arg, casadi_int* sz_res, casadi_int *sz_iw, casadi_int *sz_w) {
-  if (sz_arg) *sz_arg = 6;
+  if (sz_arg) *sz_arg = 4;
   if (sz_res) *sz_res = 2;
   if (sz_iw) *sz_iw = 0;
-  if (sz_w) *sz_w = 3;
+  if (sz_w) *sz_w = 1;
   return 0;
 }
 

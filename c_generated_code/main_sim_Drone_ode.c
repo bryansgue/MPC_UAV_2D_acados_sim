@@ -75,7 +75,7 @@ int main()
 
   
     x_current[0] = 0;
-    x_current[1] = 5;
+    x_current[1] = 0;
     x_current[2] = 0;
     x_current[3] = 0;
     x_current[4] = 0;
@@ -102,6 +102,7 @@ int main()
     p[9] = 0;
     p[10] = 0;
     p[11] = 0;
+    p[12] = 0;
 
     Drone_ode_acados_sim_update_params(capsule, p, NP);
   

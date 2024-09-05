@@ -34,7 +34,6 @@ extern "C" {
 #define casadi_s3 CASADI_PREFIX(s3)
 #define casadi_s4 CASADI_PREFIX(s4)
 #define casadi_s5 CASADI_PREFIX(s5)
-#define casadi_s6 CASADI_PREFIX(s6)
 
 /* Symbol visibility in DLLs */
 #ifndef CASADI_SYMBOL_EXPORT
@@ -79,64 +78,37 @@ void casadi_copy(const casadi_real* x, casadi_int n, casadi_real* y) {
 static const casadi_int casadi_s0[10] = {6, 1, 0, 6, 0, 1, 2, 3, 4, 5};
 static const casadi_int casadi_s1[6] = {2, 1, 0, 2, 0, 1};
 static const casadi_int casadi_s2[3] = {0, 0, 0};
-static const casadi_int casadi_s3[16] = {12, 1, 0, 12, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-static const casadi_int casadi_s4[8] = {4, 1, 0, 4, 0, 1, 2, 3};
-static const casadi_int casadi_s5[11] = {8, 4, 0, 1, 2, 3, 4, 2, 3, 2, 3};
-static const casadi_int casadi_s6[3] = {4, 0, 0};
+static const casadi_int casadi_s3[17] = {13, 1, 0, 13, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+static const casadi_int casadi_s4[7] = {8, 2, 0, 1, 2, 5, 6};
+static const casadi_int casadi_s5[3] = {2, 0, 0};
 
-/* Drone_ode_constr_h_fun_jac_uxt_zt:(i0[6],i1[2],i2[],i3[12])->(o0[4],o1[8x4,4nz],o2[4x0]) */
+/* Drone_ode_constr_h_fun_jac_uxt_zt:(i0[6],i1[2],i2[],i3[13])->(o0[2],o1[8x2,2nz],o2[2x0]) */
 static int casadi_f0(const casadi_real** arg, casadi_real** res, casadi_int* iw, casadi_real* w, int mem) {
   casadi_real *rr, *ss;
-  casadi_real w0, w1, w2, *w3=w+3, *w4=w+7, w5, *w6=w+16;
-  /* #0: @0 = input[3][8] */
-  w0 = arg[3] ? arg[3][8] : 0;
-  /* #1: @1 = input[0][0] */
-  w1 = arg[0] ? arg[0][0] : 0;
-  /* #2: @0 = (@0-@1) */
-  w0 -= w1;
-  /* #3: output[0][0] = @0 */
+  casadi_real w0, *w1=w+1, *w2=w+3, w3, *w4=w+12;
+  /* #0: @0 = input[0][3] */
+  w0 = arg[0] ? arg[0][3] : 0;
+  /* #1: output[0][0] = @0 */
   if (res[0]) res[0][0] = w0;
-  /* #4: @0 = input[3][9] */
-  w0 = arg[3] ? arg[3][9] : 0;
-  /* #5: @2 = input[0][1] */
-  w2 = arg[0] ? arg[0][1] : 0;
-  /* #6: @0 = (@0-@2) */
-  w0 -= w2;
-  /* #7: output[0][1] = @0 */
+  /* #2: @0 = input[0][4] */
+  w0 = arg[0] ? arg[0][4] : 0;
+  /* #3: output[0][1] = @0 */
   if (res[0]) res[0][1] = w0;
-  /* #8: @0 = input[3][10] */
-  w0 = arg[3] ? arg[3][10] : 0;
-  /* #9: @1 = (@1-@0) */
-  w1 -= w0;
-  /* #10: output[0][2] = @1 */
-  if (res[0]) res[0][2] = w1;
-  /* #11: @1 = input[3][11] */
-  w1 = arg[3] ? arg[3][11] : 0;
-  /* #12: @2 = (@2-@1) */
-  w2 -= w1;
-  /* #13: output[0][3] = @2 */
-  if (res[0]) res[0][3] = w2;
-  /* #14: @3 = zeros(8x4,4nz) */
-  casadi_clear(w3, 4);
-  /* #15: @4 = ones(8x1) */
-  casadi_fill(w4, 8, 1.);
-  /* #16: {NULL, NULL, @2, @1, NULL, NULL, NULL, NULL} = vertsplit(@4) */
-  w2 = w4[2];
-  w1 = w4[3];
-  /* #17: @0 = (-@2) */
-  w0 = (- w2 );
-  /* #18: @5 = (-@1) */
-  w5 = (- w1 );
-  /* #19: @6 = vertcat(@0, @5, @2, @1) */
-  rr=w6;
+  /* #4: @1 = zeros(8x2,2nz) */
+  casadi_clear(w1, 2);
+  /* #5: @2 = ones(8x1) */
+  casadi_fill(w2, 8, 1.);
+  /* #6: {NULL, NULL, NULL, NULL, NULL, @0, @3, NULL} = vertsplit(@2) */
+  w0 = w2[5];
+  w3 = w2[6];
+  /* #7: @4 = vertcat(@0, @3) */
+  rr=w4;
   *rr++ = w0;
-  *rr++ = w5;
-  *rr++ = w2;
-  *rr++ = w1;
-  /* #20: (@3[:4] = @6) */
-  for (rr=w3+0, ss=w6; rr!=w3+4; rr+=1) *rr = *ss++;
-  /* #21: output[1][0] = @3 */
-  casadi_copy(w3, 4, res[1]);
+  *rr++ = w3;
+  /* #8: (@1[:2] = @4) */
+  for (rr=w1+0, ss=w4; rr!=w1+2; rr+=1) *rr = *ss++;
+  /* #9: output[1][0] = @1 */
+  casadi_copy(w1, 2, res[1]);
   return 0;
 }
 
@@ -209,18 +181,18 @@ CASADI_SYMBOL_EXPORT const casadi_int* Drone_ode_constr_h_fun_jac_uxt_zt_sparsit
 
 CASADI_SYMBOL_EXPORT const casadi_int* Drone_ode_constr_h_fun_jac_uxt_zt_sparsity_out(casadi_int i) {
   switch (i) {
-    case 0: return casadi_s4;
-    case 1: return casadi_s5;
-    case 2: return casadi_s6;
+    case 0: return casadi_s1;
+    case 1: return casadi_s4;
+    case 2: return casadi_s5;
     default: return 0;
   }
 }
 
 CASADI_SYMBOL_EXPORT int Drone_ode_constr_h_fun_jac_uxt_zt_work(casadi_int *sz_arg, casadi_int* sz_res, casadi_int *sz_iw, casadi_int *sz_w) {
-  if (sz_arg) *sz_arg = 8;
+  if (sz_arg) *sz_arg = 6;
   if (sz_res) *sz_res = 11;
   if (sz_iw) *sz_iw = 0;
-  if (sz_w) *sz_w = 20;
+  if (sz_w) *sz_w = 14;
   return 0;
 }
 
